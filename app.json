@@ -1,6 +1,6 @@
 {
   "id":"com.tesla",
-  "version":"1.0.3",
+  "version":"1.0.4",
   "compatibility":">=1.1.2",
   "name":{
     "en":"Tesla",
@@ -13,6 +13,14 @@
   "author":{
     "name":"Erik van Dongen",
     "website":"http://github.com/irritanterik/"
+  },
+  "contributing": {
+    "donate": {
+      "paypal": {
+        "username": "ErikvanDongen",
+        "currency": "EUR"
+      }
+    }
   },
   "category":[
 		"localization",
@@ -790,14 +798,8 @@
       }
     }
   ],
-  "speechExamples":[
-    {
-      "en": "Tesla [car name]",
-      "nl": "Tesla [naam auto]"
-    },
-    {
-      "en": "What is address/location/position [car name]",
-      "nl": "Wat is adres/locatie/positie [naam auto]"
-    }
-  ]
+  "speechExamples": {
+    "en": ["Tesla [car name]", "What is address/location/position [car name]"],
+    "nl": ["Tesla [naam auto]", "Wat is adres/locatie/positie [naam auto]"]
+  }
 }
