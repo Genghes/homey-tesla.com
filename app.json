@@ -1,14 +1,14 @@
 {
   "id":"com.tesla",
-  "version":"1.0.4",
+  "version":"1.0.5",
   "compatibility":">=1.1.2",
   "name":{
     "en":"Tesla",
     "nl":"Tesla"
   },
   "description":{
-    "en":"Control your Tesla Model S",
-    "nl":"Bedien je Tesla Model S"
+    "en":"Control your Tesla",
+    "nl":"Bedien je Tesla"
   },
   "author":{
     "name":"Erik van Dongen",
@@ -87,6 +87,112 @@
       "images":{
         "large":"drivers/models/assets/images/large.jpg",
         "small":"drivers/models/assets/images/small.jpg"
+      },
+      "class":"other",
+      "capabilities":["location", "location_human", "moving"],
+      "mobile": {
+        "components": [
+          {
+            "id": "icon",
+            "capabilities": []
+          },
+          {
+            "id": "sensor",
+            "capabilities": ["moving", "location_human"],
+            "options": {
+              "icons": {
+                "moving": "/assets/gauge_icon.svg",
+                "location_human": "/assets/location_icon.svg"
+              },
+              "moving": {
+                "noblink": true,
+                "label": {
+                  "true": {
+                    "en": "Driving",
+                    "nl": "Rijdt"
+                  },
+                  "false": {
+                    "en": "Not driving",
+                    "nl": "Staat stil"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "settings":[
+        {
+          "type":"group",
+          "label":{
+            "en":"General settings",
+            "nl":"Instellingen"
+          },
+          "children":[
+            { "id":"retriggerRestrictTime",
+              "type":"number",
+              "label":{
+                "en":"Minimum time between movement triggers (seconds)",
+                "nl":"Minimumtijd tussen beweging triggers (seconden)"
+              },
+              "value": 10,
+              "attr":{
+                "min": 0,
+                "max": 86400
+              }
+            },
+            { "id":"retriggerRestrictDistance",
+              "type":"number",
+              "label":{
+                "en":"Minimum distance travelled between movement triggers (meters)",
+                "nl":"Minimaal afgelegde afstand tussen triggers (meter)"
+              },
+              "value": 1,
+              "attr":{
+                "min": 0,
+                "max": 40075000
+              }
+            },
+            { "id":"pollInterval",
+              "type":"number",
+              "label":{
+                "en":"Polling interval for location and geofence tracking (seconds)",
+                "nl":"Poll-interval voor bijhouden locatie en geofences (seconden)"
+              },
+              "value": 20,
+              "attr":{
+                "min": 10,
+                "max": 600
+              }
+            }
+          ]
+        }
+      ],
+      "pair":[
+        {
+          "id":"start"
+        },
+        {
+          "id":"list_devices",
+          "template":"list_devices",
+          "navigation":{
+            "next":"add_vehicle"
+          }
+        },
+        {
+          "id":"add_vehicle",
+          "template":"add_devices"
+        }
+      ]
+    },{
+      "id":"modelx",
+      "name":{
+        "en":"Model X",
+        "nl":"Model X"
+      },
+      "images":{
+        "large":"drivers/modelx/assets/images/large.jpg",
+        "small":"drivers/modelx/assets/images/small.jpg"
       },
       "class":"other",
       "capabilities":["location", "location_human", "moving"],
