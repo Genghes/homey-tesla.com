@@ -3,6 +3,7 @@ env.json
 libtest.js
 test.js
 location.js
+old_settings/
 
 teslajs/
 node_modules/**/*.md

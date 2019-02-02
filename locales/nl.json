@@ -47,18 +47,5 @@
       "buttonClear": "Log verwijderen",
       "buttonCopy": "Log kopiëren"
 		}
-	},
-	"pair": {
-		"start": {
-			"title": "Toevoegen Tesla Model S",
-			"intro": "Als er een geldig account is ingesteld in de app-instellingen van Homey, dan worden de bijbehorende voertuigen weergegeven.",
-			"buttonClose": "Sluiten",
-			"messages": {
-				"busyValidation": "Account valideren...",
-				"busyGetVehicles": "Inlezen voertuigen uit account...",
-				"errorNoSettings": "Er is geen account ingesteld in de app-instellingen.",
-				"errorInvalidSettings": "Er is een ongeldig account ingesteld in de app-instellingen."
-			}
-		}
 	}
 }

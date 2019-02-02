@@ -59,18 +59,5 @@
       "buttonClear": "Clear log",
       "buttonCopy": "Copy log"
 		}
-	},
-	"pair": {
-		"start": {
-			"title": "Add car",
-      "intro": "If a valid account is configured in the app settings sections of Homey, the cars in your Tesla account will be listed.",
-			"buttonClose": "Close",
-			"messages": {
-				"busyValidation": "Validation account settings...",
-				"busyGetVehicles": "Get cars from account...",
-				"errorNoSettings": "No account configured in the app settings section.",
-				"errorInvalidSettings": "Invalid account configured in the app settings sections."
-			}
-		}
-  }
+	}
 }

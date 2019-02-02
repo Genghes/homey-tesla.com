@@ -1,7 +1,8 @@
 {
-  "id":"com.tesla",
-  "version":"1.0.5",
-  "compatibility":">=1.1.2",
+  "id":"com.tesla.2",
+  "version":"2.0.0",
+  "compatibility":">=2.x",
+  "sdk": 2,
   "name":{
     "en":"Tesla",
     "nl":"Tesla"
@@ -23,12 +24,10 @@
     }
   },
   "category":[
-		"localization",
-    "tools"
+		"localization"
 	],
   "permissions":[
     "homey:manager:geolocation",
-    "homey:manager:speech-input",
     "homey:manager:speech-output"
   ],
   "images":{
@@ -36,21 +35,6 @@
     "small":"./assets/images/small.png"
   },
   "capabilities":{
-    "location": {
-      "type": "string",
-      "title": {
-        "en": "Location",
-        "nl": "Positie"
-      },
-      "units": {
-        "en": "Lat Lng"
-      },
-      "desc": {
-        "en": "GPS location"
-      },
-      "getable": true,
-      "setable": false
-    },
     "location_human": {
       "type": "string",
       "title": {
@@ -79,54 +63,92 @@
   },
   "drivers":[
     {
-      "id":"models",
+      "id":"ev",
       "name":{
-        "en":"Model S",
-        "nl":"Model S"
+        "en":"Model S/3/X",
+        "nl":"Model S/3/X"
       },
       "images":{
-        "large":"drivers/models/assets/images/large.jpg",
-        "small":"drivers/models/assets/images/small.jpg"
+        "large":"drivers/ev/assets/images/large_s.jpg",
+        "small":"drivers/ev/assets/images/small_s.jpg"
       },
       "class":"other",
-      "capabilities":["location", "location_human", "moving"],
-      "mobile": {
-        "components": [
-          {
-            "id": "icon",
-            "capabilities": []
-          },
-          {
-            "id": "sensor",
-            "capabilities": ["moving", "location_human"],
-            "options": {
-              "icons": {
-                "moving": "/assets/gauge_icon.svg",
-                "location_human": "/assets/location_icon.svg"
-              },
-              "moving": {
-                "noblink": true,
-                "label": {
-                  "true": {
-                    "en": "Driving",
-                    "nl": "Rijdt"
-                  },
-                  "false": {
-                    "en": "Not driving",
-                    "nl": "Staat stil"
-                  }
-                }
-              }
-            }
-          }
-        ]
-      },
+      "capabilities":["location_human", "moving", "measure_battery"],
       "settings":[
         {
           "type":"group",
           "label":{
-            "en":"General settings",
-            "nl":"Instellingen"
+            "en":"Tracking settings",
+            "nl":"Instellingen polling"
+          },
+          "children":[
+            { "id":"locationPolling",
+              "type":"checkbox",
+              "label":{
+                "en":"Track location",
+                "nl":"Locatie volgen"
+              },
+              "value": true
+            },
+            { "id":"tripTracking",
+              "type":"checkbox",
+              "label":{
+                "en":"Save last 100 trips (for debugging purposes)",
+                "nl":"Laatste 100 ritten opslaan (analyse en debug optie)"
+              },
+              "value": false
+            },
+            { "id":"locationIntervalDriving",
+              "type":"number",
+              "label":{
+                "en":"Location tracking interval during driving (seconds)",
+                "nl":"Interval volgen locatie tijdens rijden (seconden)"
+              },
+              "value": 30,
+              "attr":{
+                "min": 10,
+                "max": 600
+              }
+            },
+            { "id":"locationIntervalParked",
+              "type":"number",
+              "label":{
+                "en":"Location tracking when parked (seconds)",
+                "nl":"Interval volgen locatie in stilstand (seconden)"
+              },
+              "value": 120,
+              "attr":{
+                "min": 10,
+                "max": 600
+              }
+            },
+            { "id":"batteryPolling",
+              "type":"checkbox",
+              "label":{
+                "en":"Poll battery level",
+                "nl":"Accuniveau bijhouden"
+              },
+              "value": true
+            },
+            { "id":"batteryInterval",
+              "type":"number",
+              "label":{
+                "en":"Battery poll interval (minutes)",
+                "nl":"Interval controle accuniveau (minuten)"
+              },
+              "value": 20,
+              "attr":{
+                "min": 1,
+                "max": 1440
+              }
+            }
+          ]
+        },
+        {
+          "type":"group",
+          "label":{
+            "en":"Trigger tuning - adjust settings for optimal flow triggering.",
+            "nl":"Triggers tunen - instellingen om flow triggers naar je zin te maken."
           },
           "children":[
             { "id":"retriggerRestrictTime",
@@ -152,123 +174,22 @@
                 "min": 0,
                 "max": 40075000
               }
-            },
-            { "id":"pollInterval",
-              "type":"number",
-              "label":{
-                "en":"Polling interval for location and geofence tracking (seconds)",
-                "nl":"Poll-interval voor bijhouden locatie en geofences (seconden)"
-              },
-              "value": 20,
-              "attr":{
-                "min": 10,
-                "max": 600
-              }
             }
           ]
-        }
-      ],
-      "pair":[
-        {
-          "id":"start"
         },
-        {
-          "id":"list_devices",
-          "template":"list_devices",
-          "navigation":{
-            "next":"add_vehicle"
-          }
-        },
-        {
-          "id":"add_vehicle",
-          "template":"add_devices"
-        }
-      ]
-    },{
-      "id":"modelx",
-      "name":{
-        "en":"Model X",
-        "nl":"Model X"
-      },
-      "images":{
-        "large":"drivers/modelx/assets/images/large.jpg",
-        "small":"drivers/modelx/assets/images/small.jpg"
-      },
-      "class":"other",
-      "capabilities":["location", "location_human", "moving"],
-      "mobile": {
-        "components": [
-          {
-            "id": "icon",
-            "capabilities": []
-          },
-          {
-            "id": "sensor",
-            "capabilities": ["moving", "location_human"],
-            "options": {
-              "icons": {
-                "moving": "/assets/gauge_icon.svg",
-                "location_human": "/assets/location_icon.svg"
-              },
-              "moving": {
-                "noblink": true,
-                "label": {
-                  "true": {
-                    "en": "Driving",
-                    "nl": "Rijdt"
-                  },
-                  "false": {
-                    "en": "Not driving",
-                    "nl": "Staat stil"
-                  }
-                }
-              }
-            }
-          }
-        ]
-      },
-      "settings":[
         {
           "type":"group",
           "label":{
-            "en":"General settings",
-            "nl":"Instellingen"
+            "en":"Account settings - reconfigure a changed password. This password will not be saved on Homey.",
+            "nl":"Instellingen account - geef hier een gewijzigd wachtwoord op. Het wachtwoord wordt niet opgeslagen op Homey."
           },
+
           "children":[
-            { "id":"retriggerRestrictTime",
-              "type":"number",
+            { "id":"password",
+              "type":"password",
               "label":{
-                "en":"Minimum time between movement triggers (seconds)",
-                "nl":"Minimumtijd tussen beweging triggers (seconden)"
-              },
-              "value": 10,
-              "attr":{
-                "min": 0,
-                "max": 86400
-              }
-            },
-            { "id":"retriggerRestrictDistance",
-              "type":"number",
-              "label":{
-                "en":"Minimum distance travelled between movement triggers (meters)",
-                "nl":"Minimaal afgelegde afstand tussen triggers (meter)"
-              },
-              "value": 1,
-              "attr":{
-                "min": 0,
-                "max": 40075000
-              }
-            },
-            { "id":"pollInterval",
-              "type":"number",
-              "label":{
-                "en":"Polling interval for location and geofence tracking (seconds)",
-                "nl":"Poll-interval voor bijhouden locatie en geofences (seconden)"
-              },
-              "value": 20,
-              "attr":{
-                "min": 10,
-                "max": 600
+                "en":"New password",
+                "nl":"Nieuw wachtwoord"
               }
             }
           ]
@@ -276,7 +197,15 @@
       ],
       "pair":[
         {
-          "id":"start"
+          "id":"start",
+          "template":"login_credentials",
+          "options":{
+            "logo":"pair_logo.png",
+            "usernameLabel":"Tesla account",
+            "usernamePlaceholder":"e.musk@tesla.com",
+            "passwordLabel":"Password",
+            "passwordPlaceholder":"P4ssw0rd"
+          }
         },
         {
           "id":"list_devices",
@@ -303,7 +232,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           }
         ],
         "tokens":[
@@ -338,7 +267,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           }
         ],
         "tokens":[
@@ -373,7 +302,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           }
         ],
         "tokens":[
@@ -409,38 +338,6 @@
             "example":2500.21
           }
         ]
-      },
-      { "id":"vehicleGeofenceEntered",
-        "title":{
-          "en":"Entered geofence",
-          "nl":"Betreed geofence"
-        },
-        "args": [
-          {
-            "name": "device",
-            "type": "device",
-            "filter":"driver_id=models"
-          },{
-            "name": "geofence",
-            "type": "autocomplete"
-          }
-        ]
-      },
-      { "id":"vehicleGeofenceLeft",
-        "title":{
-          "en":"Left geofence",
-          "nl":"Verlaat geofence"
-        },
-        "args": [
-          {
-            "name": "device",
-            "type": "device",
-            "filter":"driver_id=models"
-          },{
-            "name": "geofence",
-            "type": "autocomplete"
-          }
-        ]
       }
     ],
     "conditions": [
@@ -453,7 +350,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           }
         ]
       },
@@ -466,7 +363,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           },{
             "name": "temperature",
             "type": "number"
@@ -482,7 +379,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           },{
             "name": "apiValue",
             "type": "autocomplete"
@@ -504,23 +401,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
-          }
-        ]
-      },
-      { "id":"vehicleGeofence",
-        "title":{
-          "en":"Is !{{|not}} in geofence",
-          "nl":"Is !{{|niet}} in geofence"
-        },
-        "args": [
-          {
-            "name": "device",
-            "type": "device",
-            "filter":"driver_id=models"
-          },{
-            "name": "geofence",
-            "type": "autocomplete"
+            "filter":"driver_id=ev"
           }
         ]
       },
@@ -533,7 +414,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           }
         ]
       }
@@ -548,7 +429,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           },{
             "name": "autoconditioningstate",
             "type": "dropdown",
@@ -577,7 +458,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           },{
             "name": "temp",
             "type": "range",
@@ -598,7 +479,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           },{
             "name": "chargestate",
             "type": "dropdown",
@@ -627,7 +508,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           },{
             "name": "lock",
             "type": "dropdown",
@@ -656,7 +537,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           }
         ]
       },
@@ -669,7 +550,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           }
         ]
       },
@@ -682,7 +563,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           }
         ]
       },
@@ -695,7 +576,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           },{
             "name": "panoroofstate",
             "type": "dropdown",
@@ -734,7 +615,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           }
         ]
       },
@@ -747,7 +628,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           }
         ]
       },
@@ -760,7 +641,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           }
         ]
       },
@@ -773,7 +654,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           },{
             "name": "chargemode",
             "type": "dropdown",
@@ -802,7 +683,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           },{
             "name": "limit",
             "type": "range",
@@ -823,7 +704,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           },{
             "name": "valetstate",
             "type": "dropdown",
@@ -852,7 +733,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           },{
             "name": "pin",
             "type": "text",
@@ -874,38 +755,10 @@
           {
             "name": "device",
             "type": "device",
-            "filter":"driver_id=models"
+            "filter":"driver_id=ev"
           }
         ]
       }
     ]
-  },
-  "speech": [
-    {
-      "id": "tesla",
-      "importance": 1,
-      "triggers": {
-        "en": ["tesla"],
-        "nl": ["tesla"]
-      }
-    },{
-      "id": "where_is",
-      "importance": 0.4,
-      "triggers": {
-        "en": ["where is", "what is"],
-        "nl": ["waar is", "wat is"]
-      }
-    },{
-      "id": "address",
-      "importance": 0.4,
-      "triggers": {
-        "en": ["address", "location", "position"],
-        "nl": ["adres", "locatie", "positie"]
-      }
-    }
-  ],
-  "speechExamples": {
-    "en": ["Tesla [car name]", "What is address/location/position [car name]"],
-    "nl": ["Tesla [naam auto]", "Wat is adres/locatie/positie [naam auto]"]
   }
 }
