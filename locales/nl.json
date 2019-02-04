@@ -5,47 +5,8 @@
 		"placeCityConjunction": " in ",
 		"positionUnknown": "Onbekend"
 	},
-	"settings": {
-    "OSMlanguage": "nl",
-		"title": "Tesla instellingen",
-		"intro": "Voordat er een of meedere auto's toegevoegd kunnen worden moet hier een geldige gebruikersnaam en wachtwoord worden opgegeven. Deze instellingen worden op je Homey opgeslagen.",
-		"instruction": "",
-		"account": {
-			"title": "Tesla account",
-			"fieldUsername": "Gebruikersnaam",
-			"fieldPassword": "Wachtwoord",
-      "fieldSpeech": "Inschakelen spraak triggers",
-			"fieldPolling": "Inschakelen polling",
-			"fieldDebug": "Inschakelen debug log",
-			"buttonSave": "Opslaan",
-			"buttonClear": "Account instellingen verwijderen",
-			"messages": {
-				"busyClearing": "Account verwijderen van Homey...",
-				"busySaving": "Account is geldig. Instellingen worden opgeslagen...",
-				"busyValidation": "Account valideren...",
-				"confirmClearAccount": "Weet je zeker dat je het account wilt wissen? Tracking zal worden gestopt en geconfigureerde flows stoppen met werken.",
-				"errorValidation": {
-          "400": "Gebruikersnaam of wachtwoord ontbreekt",
-          "401": "Ongeldige gebruikersnaam of wachtwoord",
-          "502": "Probleem bij het verbinden met Tesla"
-				},
-				"errorSaving": "Fout bij het opslaan van het account",
-				"successClearing": "Account is verwijderd",
-				"successSaving": "Account is opgeslagen"
-			}
-		},
-		"geofences": {
-			"title": "Geofences",
-			"intro": "Nog niet beschikbaar"
-		},
-		"debug": {
-			"title": "Log en analyse",
-      "tools": "Hulpmiddelen",
-			"thDateTime": "Datum en tijd",
-			"thMessage": "Bericht",
-      "buttonTest": "Test API",
-      "buttonClear": "Log verwijderen",
-      "buttonCopy": "Log kopiëren"
-		}
-	}
+  "device": {
+    "errorAccountAccess": "Geen toegang tot account. Controleer je account en voer een nieuw wachtwoord in bij 'geavanceerde instellingen'.",
+    "errorAccountAccessNotification": "Geen toegang tot je **Tesla** account. Controleer je account en voer je wachtwoord opnieuw in."
+  }
 }

@@ -25,7 +25,6 @@ module.exports = [{
         vehicles.push(vehicle.getVehicle())
       })
     })
-    console.log(vehicles)
     callback(null, vehicles)
   }
 }, {

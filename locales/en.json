@@ -5,59 +5,8 @@
 		"placeCityConjunction": ", ",
 		"positionUnknown": "Unknown"
 	},
-	"settings": {
-    "OSMlanguage": "en",
-		"title": "Tesla settings",
-		"intro": "Before you can add your car you need to enter your Tesla credentials first. These settings are stored locally on your Homey.",
-		"instruction": "",
-		"account": {
-			"title": "Tesla account settings",
-			"fieldUsername": "Username",
-			"fieldPassword": "Password",
-      "fieldSpeech": "Enable speech triggers",
-			"fieldPolling": "Enable polling",
-			"fieldDebug": "Enable debug logging",
-			"buttonSave": "Save",
-			"buttonClear": "Remove account settings",
-			"messages": {
-				"busyClearing": "Clearing account settings from Homey...",
-				"busySaving": "Account settings valid, saving to Homey...",
-				"busyValidation": "Validation account settings...",
-				"confirmClearAccount": "Are you sure you want to clear the account? Tracking will stop and configured flows will stop working.",
-				"errorValidation": {
-          "400": "Username or password missing",
-					"401": "Invalid username or password",
-          "502": "Something went wrong contacting Tesla"
-				},
-				"errorSaving": "Error saving account settings to Homey",
-				"successClearing": "Account settings cleared successfully",
-				"successSaving": "Account settings saved successfully"
-			}
-		},
-		"geofences": {
-			"title": "Geofences",
-      "geofencesourcetype": {
-        "AUTO": "automatic",
-        "DEFAULT": "default",
-        "USER": "user"
-      },
-      "labelNameGeofence": "Enter geofence name",
-      "newGeofenceName": "New geofence",
-      "errorGeofenceNameUnique": "Geofence name must be unique!",
-      "labelShow": "Show",
-      "optionVehicles": "Vehicles",
-      "optionStartPoints": "Start points",
-      "optionEndPoints": "End points",
-      "optionRoutes": "Routes"
-  	},
-		"debug": {
-			"title": "Log and debug",
-      "tools": "Tools",
-			"thDateTime": "Date and time",
-			"thMessage": "Message",
-      "buttonTest": "Test API",
-      "buttonClear": "Clear log",
-      "buttonCopy": "Copy log"
-		}
-	}
+  "device": {
+    "errorAccountAccess": "No access to account. Check your account and enter a new password in device settings.",
+    "errorAccountAccessNotification": "No access to your **Tesla** account. Check your account and enter a new password in device settings."
+  }
 }

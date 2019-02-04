@@ -60,7 +60,9 @@ class Vehicle extends Homey.Device {
     })
     vehicles[deviceId].teslaApi.on('invalid_user_password', async () => {
       device.log('Device unavailable due to invalid account / username / password')
-      device.setUnavailable('No access to account. Check your account and enter new password in device settings.') // TODO: translate
+      device.setUnavailable(Homey.__('device.errorAccountAccess'))
+      let notification = new Homey.Notification({excerpt: Homey.__('device.errorAccountAccessNotification')})
+      await notification.register()
       await trackController(device)
     })
     vehicles[deviceId].teslaApi.on('error', async reason => {
@@ -214,7 +216,7 @@ module.exports = Vehicle
 
 async function trackController (device) {
   // called after init, settings changed, changeddrivestate
-  console.log('trackController - clear times')
+  console.log('trackController - clear timers')
   let deviceId = device.getData().id
   if (vehicles[deviceId].retryTrackingTimeoutId) clearTimeout(vehicles[deviceId].retryTrackingTimeoutId)
   if (vehicles[deviceId].locationTrackerIntervalObject) clearInterval(vehicles[deviceId].locationTrackerIntervalObject)
@@ -274,9 +276,15 @@ async function trackLocation (device) {
     await device.setCapabilityValue('moving', isMoving)
     await device.setCapabilityValue('location_human', driveState.place + ', ' + driveState.city)
     let distance = Geo.calculateDistance(newLocation.latitude, newLocation.longitude, previousLocation.latitude || newLocation.latitude, previousLocation.longitude || newLocation.longitude) || 0
+    if (distance < 1) distance = 0
     device.log('trackLocation', {distance: distance, moving: isMoving})
     await logAvailable(device)
     // todo: handle changemovingstate in separate function
+
+    let tokens = {}
+    let state = {}
+    device._driver.triggerflow(device, tokens, state)
+
     if (isMoving !== wasMoving && wasMoving !== null) return trackController(device)
   }).catch(reason => {
     // device.log('IGNORE drivestate request returned error', reason) // TODO: ignore

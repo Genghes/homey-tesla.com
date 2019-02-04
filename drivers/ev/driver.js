@@ -4,6 +4,17 @@ const Homey = require('homey')
 const Tesla = require('../../lib/tesla.js')
 
 class VehicleDriver extends Homey.Driver {
+  onInit () {
+    this._flowtje = new Homey.FlowCardTriggerDevice('vehicleMoved').register()
+  }
+
+  triggerflow (device, token, state) {
+    console.log('flow vehicleMoved', token, state)
+    this._flowtje.trigger(device, token, state)
+      .then(this.log)
+      .catch(this.error)
+  }
+
   onPair (socket) {
     let pairGrant
     let teslaSession
