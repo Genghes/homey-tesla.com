@@ -13,7 +13,6 @@ var vehicles = {}
 
 class Vehicle extends Homey.Device {
   onDeleted () {
-    // TODO: test
     const device = this
     const deviceId = device.getData().id
     device.log('deleting device', deviceId)
@@ -31,8 +30,7 @@ class Vehicle extends Homey.Device {
   }
 
   async onInit () {
-    // TODO: load geofences, timeout for 5 minutes if tracking errors 3 times *not needed anymore*
-    // geofences = Homey.manager('settings').get('geofences')
+    // TODO: load geofences:  geofences = Homey.manager('settings').get('geofences')
     const device = this
     const deviceId = device.getData().id
     await device.setSettings({password: ''})
@@ -48,10 +46,11 @@ class Vehicle extends Homey.Device {
       apiErrors: 0,
       retryTrackingTimeoutId: null,
       timeLastUpdate: null,
-      timeLastTrigger: 0,
+      lastTriggerMovedTime: null,
+      lastTriggerMovedOdometer: null,
       moving: null,
       battery: null,
-      route: null,
+      route: {},
       location: {}
     }
     vehicles[deviceId].teslaApi = new Tesla({
@@ -68,6 +67,7 @@ class Vehicle extends Homey.Device {
     vehicles[deviceId].teslaApi.on('error', async reason => {
       vehicles[deviceId].apiErrors ++
       device.log(`error from Api, counting ${vehicles[deviceId].apiErrors} to max ${maxApiErrors}`)
+      if (vehicles[deviceId].retryTrackingTimeoutId) return device.log('..allready in timeout')
       if (vehicles[deviceId].apiErrors > maxApiErrors) {
         device.error(`error counter broke treshold, timeout for ${retryTrackingTimeoutS} seconds`)
         await device.setUnavailable(`Counted ${vehicles[deviceId].apiErrors} errors on api calls to vehicle. Timeout for ${retryTrackingTimeoutS} seconds.`)
@@ -83,6 +83,7 @@ class Vehicle extends Homey.Device {
       return device.getStoreValue('vehicleId')
     })
     await device.setStoreValue('vehicleId', vehicleId)
+    vehicles[deviceId].vehicleId = vehicleId
     trackController(device)
   }
 
@@ -99,11 +100,10 @@ class Vehicle extends Homey.Device {
       teslaSession.on('grant', async newGrant => {
         device.log('Succesvol got grant with new settings', newGrant)
         await device.setStoreValue('grant', newGrant)
-        await logAvailable(device)
-        reInit = true
       })
       await teslaSession.login().then(() => {
         device.log('tesla login success')
+        reInit = true
         return logAvailable(device)
       }).catch(error => {
         device.log('tesla login error', error)
@@ -146,14 +146,17 @@ class Vehicle extends Homey.Device {
     if (!vehicles[deviceId]) throw new Error('no_vehicle')
     let vehicle = {}
     vehicle.id = vehicles[deviceId].id
+    vehicle.vehicleId = vehicles[deviceId].vehicleId
     vehicle.name = vehicles[deviceId].name
     vehicle.apiErrors = vehicles[deviceId].apiErrors
-    vehicle.timeLastTrigger = vehicles[deviceId].timeLastTrigger
+    vehicle.lastTriggerMovedTime = vehicles[deviceId].lastTriggerMovedTime
+    vehicle.lastTriggerMovedOdometer = vehicles[deviceId].lastTriggerMovedOdometer
     vehicle.timeLastUpdate = vehicles[deviceId].timeLastUpdate
     vehicle.moving = vehicles[deviceId].moving
     vehicle.battery = vehicles[deviceId].battery
     vehicle.route = vehicles[deviceId].route
     vehicle.location = vehicles[deviceId].location
+    vehicle.routes = device.getStoreValue('routes') || []
     return vehicle
   }
 
@@ -216,16 +219,15 @@ module.exports = Vehicle
 
 async function trackController (device) {
   // called after init, settings changed, changeddrivestate
-  console.log('trackController - clear timers')
+  device.log('trackController')
   let deviceId = device.getData().id
   if (vehicles[deviceId].retryTrackingTimeoutId) clearTimeout(vehicles[deviceId].retryTrackingTimeoutId)
+  vehicles[deviceId].retryTrackingTimeoutId = null
   if (vehicles[deviceId].locationTrackerIntervalObject) clearInterval(vehicles[deviceId].locationTrackerIntervalObject)
   if (vehicles[deviceId].batteryTrackerIntervalObject) clearInterval(vehicles[deviceId].batteryTrackerIntervalObject)
   if (!device.getAvailable()) return
 
-  console.log('trackController - tracklocation')
   await trackLocation(device, 0)
-  console.log('trackController - trackbattery')
   await trackBattery(device, 0)
 
   let settings = device.getSettings()
@@ -239,60 +241,99 @@ async function trackController (device) {
 }
 
 async function trackBattery (device) {
-  // todo: check if custom flowtriggers are needed on battery level change
   const deviceId = device.getData().id
   const vehicleId = device.getStoreValue('vehicleId')
-  return vehicles[deviceId].teslaApi.getChargeState(vehicleId).then(async chargestate => {
-    device.log('battery', chargestate.battery_level)
-    vehicles[deviceId].battery = chargestate.battery_level
-    vehicles[deviceId].timeLastUpdate = new Date()
-    await logAvailable(device)
-    return device.setCapabilityValue('measure_battery', chargestate.battery_level)
-  }).catch(reason => {
-    // device.log('IGNORE battery request returned error', reason) // TODO: ignore
-  })
+  let chargeState
+  try {
+    chargeState = await vehicles[deviceId].teslaApi.getChargeState(vehicleId)
+  } catch (reason) { return device.log('trackBattery Api error') } // ignored becouse of emmitted error on teslaApi handled in onInit()
+  device.log('battery', chargeState.battery_level)
+  vehicles[deviceId].battery = chargeState.battery_level
+  vehicles[deviceId].timeLastUpdate = new Date()
+  await logAvailable(device)
+  return device.setCapabilityValue('measure_battery', chargeState.battery_level)
 }
 
 async function trackLocation (device) {
   const deviceId = device.getData().id
   const vehicleId = device.getStoreValue('vehicleId')
   const wasMoving = vehicles[deviceId].moving
-  let isMoving = null
   const previousLocation = vehicles[deviceId].location || {}
-  let newLocation = previousLocation
-
-  return vehicles[deviceId].teslaApi.getDriveState(vehicleId).then(async driveState => {
+  let isMoving = null
+  let driveState
+  let vehicleState
+  try {
+    driveState = await vehicles[deviceId].teslaApi.getDriveState(vehicleId)
     isMoving = (driveState.shift_state !== null && driveState.shift_state !== 'P')
-    newLocation = {
-      latitude: driveState.latitude,
-      longitude: driveState.longitude,
-      city: driveState.city,
-      place: driveState.place
+    if (isMoving || wasMoving || wasMoving === null) vehicleState = await vehicles[deviceId].teslaApi.getVehicleState(vehicleId)
+  } catch (reason) { return device.log('trackLocation Api error') } // ignored becouse of emmitted error on teslaApi handled in onInit()
+  let newOdometer = (vehicleState ? vehicleState.odometer * mi2km * 1000 : vehicles[deviceId].location.odometer || 0)
+  let newLocation = {
+    latitude: driveState.latitude,
+    longitude: driveState.longitude,
+    city: driveState.city,
+    place: driveState.place,
+    odometer: newOdometer
+  }
+  vehicles[deviceId].location = newLocation
+  vehicles[deviceId].moving = isMoving
+  vehicles[deviceId].timeLastUpdate = new Date()
+
+  let distanceMoved = formatValue((newOdometer - previousLocation.odometer) || 0)
+  let distanceMovedSinceTrigger = formatValue(newOdometer - vehicles[deviceId].lastTriggerMovedOdometer) || distanceMoved
+  let timeSinceTrigger = (new Date() - vehicles[deviceId].lastTriggerMovedTime) || 0
+  let distanceHomey = Geo.calculateDistance(newLocation.latitude, newLocation.longitude, Homey.ManagerGeolocation.getLatitude(), Homey.ManagerGeolocation.getLongitude()) || 0
+  distanceHomey = formatDistance(distanceHomey < 1 ? 0 : distanceHomey)
+  if (!vehicles[deviceId].route.start) vehicles[deviceId].route = {start: previousLocation, end: {}}
+  let distanceTraveled = formatValue(vehicles[deviceId].location.odometer - vehicles[deviceId].route.start.odometer) || 0
+
+  device.log('trackLocation', {isMoving, distanceHomey, distanceMoved, distanceMovedSinceTrigger, distanceTraveled, timeSinceTrigger})
+
+  await logAvailable(device)
+  await device.setCapabilityValue('location_human', driveState.place + ', ' + driveState.city)
+  await device.setCapabilityValue('moving', isMoving)
+  await device.setCapabilityValue('distance', distanceHomey)
+
+  if (isMoving &&
+    distanceMovedSinceTrigger > device.getSettings().retriggerRestrictDistance &&
+    timeSinceTrigger > (device.getSettings().retriggerRestrictTime * 1000)) {
+    await device.getDriver().triggerVehicleMoved(device, {distanceMoved: distanceMovedSinceTrigger, distanceTraveled})
+    vehicles[deviceId].lastTriggerMovedOdometer = newOdometer
+    vehicles[deviceId].lastTriggerMovedTime = new Date()
+  }
+
+  if (isMoving !== wasMoving) {
+    if (isMoving) {
+      await device.getDriver().triggerVehicleStartMoving(device, {distanceMoved: distanceMoved})
+      vehicles[deviceId].route.start.time = new Date()
+    } else if (wasMoving) {
+      vehicles[deviceId].route.end = newLocation
+      vehicles[deviceId].route.end.time = new Date()
+      await device.getDriver().triggerVehicleStoptMoving(device, {
+        distanceMoved,
+        distanceTraveled,
+        locationStart: vehicles[deviceId].route.start.place + ', ' + vehicles[deviceId].route.start.city,
+        locationStop: vehicles[deviceId].route.end.place + ', ' + vehicles[deviceId].route.end.city
+      })
+      if (device.getSettings().tripTracking) {
+        let routes = device.getStoreValue('routes') || []
+        routes.push(vehicles[deviceId].route)
+        device.setStoreValue('routes', routes.slice(-100))
+      }
+      vehicles[deviceId].route.start = vehicles[deviceId].route.end
+      delete vehicles[deviceId].route.end
     }
-    vehicles[deviceId].location = newLocation
-    vehicles[deviceId].moving = isMoving
-    vehicles[deviceId].timeLastUpdate = new Date()
-
-    await device.setCapabilityValue('moving', isMoving)
-    await device.setCapabilityValue('location_human', driveState.place + ', ' + driveState.city)
-    let distance = Geo.calculateDistance(newLocation.latitude, newLocation.longitude, previousLocation.latitude || newLocation.latitude, previousLocation.longitude || newLocation.longitude) || 0
-    if (distance < 1) distance = 0
-    device.log('trackLocation', {distance: distance, moving: isMoving})
-    await logAvailable(device)
-    // todo: handle changemovingstate in separate function
-
-    let tokens = {}
-    let state = {}
-    device._driver.triggerflow(device, tokens, state)
-
-    if (isMoving !== wasMoving && wasMoving !== null) return trackController(device)
-  }).catch(reason => {
-    // device.log('IGNORE drivestate request returned error', reason) // TODO: ignore
-  })
+    if (wasMoving !== null) return trackController(device)
+  }
 }
 
-function movingChanged (device, isMoving) {
-  device.log('moving changed', isMoving)
+function formatValue (t) {
+  return Math.round(t.toFixed(1) * 10) / 10
+}
+
+function formatDistance (distance) {
+  if (distance < 1000) return formatValue(distance) + ' m'
+  return formatValue(distance / 1000) + ' km'
 }
 
 async function logAvailable (device) {
@@ -333,156 +374,3 @@ async function logAvailable (device) {
 //     )
 //   })
 // }
-
-// function stopMoving (vehicleId) {
-//   Util.debugLog('stopMoving called', {vehicleId: vehicleId, moving: vehicles[vehicleId].moving})
-//   if (!vehicles[vehicleId].moving) return
-//   if (!vehicles[vehicleId].route) return
-//
-//   // create route object for persistancy
-//   var route = vehicles[vehicleId].route
-//   route.end = vehicles[vehicleId].location
-//   route.end.time = vehicles[vehicleId].timeLastCheck
-//   route.vehicleId = vehicleId
-//
-//   teslaApi.getVehicleState(vehicleId).then(vehicleState => {
-//     vehicles[vehicleId].route.end.odometer = vehicleState.odometer * mi2km
-//
-//     // only save route if distance > 1000m
-//     if ((vehicles[vehicleId].route.distance || 0) > 1000) {
-//       // TODO: Read setting if route analysis is allowed
-//       var allRoutes = Homey.manager('settings').get('teslaRoutes') || []
-//       allRoutes.push(route)
-//       Homey.manager('settings').set('teslaRoutes', allRoutes)
-//     }
-//     // update tracker
-//     delete vehicles[vehicleId].route
-//     vehicles[vehicleId].moving = false
-//     module.exports.realtime({id: vehicleId, homeyDriverName: 'models'}, 'moving', false)
-//     Homey.manager('api').realtime('teslaLocation', vehicles[vehicleId])
-//
-//     // handle flows
-//     var tokens = {
-//       start_location: Util.createAddressSpeech(route.start.place, route.start.city),
-//       stop_location: Util.createAddressSpeech(route.end.place, route.end.city),
-//       distance: Math.ceil(route.distance) || 0
-//     }
-//
-//     Homey.manager('flow').triggerDevice(
-//       'vehicleStoptMoving',
-//       tokens,
-//       null,
-//       {id: vehicleId, homeyDriverName: 'models'},
-//       function (error, result) {
-//         Util.debugLog('flow trigger vehicle_stopt_moving ', {id: vehicleId, error: error, result: result})
-//       }
-//     )
-//   }).catch(reason => {
-//     Util.debugLog('fatal error on odometer request on stop moving', {id: vehicleId, error: reason})
-//   })
-// }
-
-// function processNewLocation (vehicleId, distance, location) {
-//   var previousLocation = vehicles[vehicleId].location
-//   var wasMoving = vehicles[vehicleId].moving
-//
-//   vehicles[vehicleId].location = location
-//   vehicles[vehicleId].timeLastUpdate = new Date().getTime()
-//   Homey.manager('api').realtime('teslaLocation', vehicles[vehicleId])
-//   module.exports.realtime({id: vehicleId, homeyDriverName: 'models'}, 'location', JSON.stringify(location))
-//   module.exports.realtime({id: vehicleId, homeyDriverName: 'models'}, 'location_human', location.place + ', ' + location.city)
-//
-//   var timeConstraint = (vehicles[vehicleId].timeLastUpdate - vehicles[vehicleId].timeLastTrigger) < (vehicles[vehicleId].settings.retriggerRestrictTime * 1000)
-//   var distanceConstraint = distance < vehicles[vehicleId].settings.retriggerRestrictDistance
-//
-//   // handle flows
-//   Util.debugLog('event: location', {id: vehicleId, place: location.place, city: location.city, distance: distance, wasMoving: wasMoving, timeConstraint: timeConstraint, distanceConstraint: distanceConstraint})
-//   checkGeofencesForVehicle(vehicleId)
-//   if (wasMoving) {
-//     // next if part is temp fix. Should be removed when bug final fixed
-//     if (!vehicles[vehicleId].route) {
-//       Util.debugLog('vehicle was moving, but without route object', {id: vehicleId, tracker: vehicles[vehicleId]})
-//       vehicles[vehicleId].route = {
-//         distance: distance,
-//         start: previousLocation
-//       }
-//     } else {
-//       vehicles[vehicleId].route.distance += distance
-//     }
-//   }
-//
-//   if (!wasMoving && !distanceConstraint) {
-//     vehicles[vehicleId].moving = true
-//     vehicles[vehicleId].route = {
-//       distance: distance,
-//       start: previousLocation
-//     }
-//     vehicles[vehicleId].route.start.time = new Date().getTime()
-//     module.exports.realtime({id: vehicleId, homeyDriverName: 'models'}, 'moving', true)
-//     Homey.manager('flow').triggerDevice('vehicleStartMoving', {
-//       address: Util.createAddressSpeech(previousLocation.place, previousLocation.city),
-//       distance: Math.ceil(distance) || 0
-//     }, null, {id: vehicleId, homeyDriverName: 'models'}, (error, result) => {
-//       Util.debugLog('flow trigger vehicle_start_moving ', {id: vehicleId, error: error, result: result})
-//     })
-//   }
-//
-//   if (!timeConstraint && !distanceConstraint) {
-//     vehicles[vehicleId].timeLastTrigger = new Date().getTime()
-//     Homey.manager('flow').triggerDevice('vehicleMoved', {
-//       address: Util.createAddressSpeech(location.place, location.city),
-//       distance: Math.ceil(distance) || 0
-//     }, null, {id: vehicleId, homeyDriverName: 'models'}, (err, result) => {
-//       Util.debugLog('flow trigger vehicle_moved ', {id: vehicleId, error: err, result: result})
-//     })
-//   }
-//
-//   if (!vehicles[vehicleId].route.start.odometer) {
-//     teslaApi.getVehicleState(vehicleId).then(vehicleState => {
-//       vehicles[vehicleId].route.start.odometer = vehicleState.odometer * mi2km
-//     })
-//   }
-// } // function processNewLocation
-
-// var self = {
-//
-//     Homey.manager('settings').on('set', (setting) => {
-//         case 'geofences':
-//           geofences = Homey.manager('settings').get(setting)
-//           checkGeofences()
-//           break
-//     })
-//
-//   },
-//   capabilities: {
-//     location: {
-//       get: function (device, callback) {
-//         Util.debugLog('capabilities > location > get', device)
-//         if (!teslaApi) return callback('not_initiated')
-//         teslaApi.getLocation(device.id).then(location => {
-//           callback(null, JSON.stringify(location))
-//         }).catch(callback)
-//       }
-//     },
-//     location_human: {
-//       get: function (device, callback) {
-//         Util.debugLog('capabilities > location_human > get', device)
-//         if (!teslaApi) return callback('not_initiated')
-//         teslaApi.getLocation(device.id).then(location => {
-//           callback(null, location.place + ', ' + location.city)
-//         }).catch(callback)
-//       }
-//     },
-//     moving: {
-//       get: function (device, callback) {
-//         Util.debugLog('capabilities > moving > get', device)
-//         if (!teslaApi) return callback('not_initiated')
-//         teslaApi.getDriveState(device.id)
-//         .then(state => { callback(null, state.speed != null) })
-//         .catch(callback)
-//       }
-//     }
-//   },
-//   getVehicles: () => { return vehicles },
-// }
-//

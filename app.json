@@ -1,5 +1,5 @@
 {
-  "id":"com.tesla.2",
+  "id":"com.tesla",
   "version":"2.0.0",
   "compatibility":">=2.0.2",
   "sdk": 2,
@@ -35,6 +35,17 @@
     "small":"./assets/images/small.png"
   },
   "capabilities":{
+    "distance": {
+      "type": "string",
+      "title": {
+        "en": "Distance from Homey",
+        "nl": "Afstand tot Homey"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "./drivers/ev/assets/distance.svg"
+    },
     "location_human": {
       "type": "string",
       "title": {
@@ -42,10 +53,13 @@
         "nl": "Positie"
       },
       "desc": {
-        "en": "Location"
+        "en": "Location",
+        "nl": "Positie"
       },
       "getable": true,
-      "setable": false
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "./drivers/ev/assets/location.svg"
     },
     "moving": {
       "type": "boolean",
@@ -58,7 +72,9 @@
         "nl": "Is auto onderweg"
       },
       "getable": true,
-      "setable": false
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "./drivers/ev/assets/moving.svg"
     }
   },
   "drivers":[
@@ -73,7 +89,7 @@
         "small":"drivers/ev/assets/images/small_s.jpg"
       },
       "class":"other",
-      "capabilities":["location_human", "moving", "measure_battery"],
+      "capabilities":["distance", "location_human", "moving", "measure_battery"],
       "settings":[
         {
           "type":"group",
@@ -235,28 +251,23 @@
             "filter":"driver_id=ev"
           }
         ],
-        "tokens":[
-          {
-            "name":"address",
-            "title":{
-              "en":"address",
-              "nl":"adres"
-            },
-            "type":"string",
-            "example":{
-              "en":"Piccadilly Circus, London",
-              "nl":"Kalverstraat in Amsterdam"
-            }
-          },{
-            "name":"distance",
-            "title":{
-              "en":"distance",
-              "nl":"afstand"
-            },
-            "type":"number",
-            "example":2500
-          }
-        ]
+        "tokens":[{
+          "name":"distanceMoved",
+          "title":{
+            "en":"distance",
+            "nl":"afstand"
+          },
+          "type":"number",
+          "example":250
+        },{
+          "name":"distanceTravelled",
+          "title":{
+            "en":"distance trip",
+            "nl":"afstand rit"
+          },
+          "type":"number",
+          "example":65000
+        }]
       },
       { "id":"vehicleStartMoving",
         "title":{
@@ -270,28 +281,15 @@
             "filter":"driver_id=ev"
           }
         ],
-        "tokens":[
-          {
-            "name":"address",
-            "title":{
-              "en":"address",
-              "nl":"adres"
-            },
-            "type":"string",
-            "example":{
-              "en":"Piccadilly Circus, London",
-              "nl":"Kalverstraat in Amsterdam"
-            }
-          },{
-            "name":"distance",
-            "title":{
-              "en":"distance",
-              "nl":"afstand"
-            },
-            "type":"number",
-            "example":25.54
-          }
-        ]
+        "tokens":[{
+          "name":"distanceMoved",
+          "title":{
+            "en":"distance",
+            "nl":"afstand"
+          },
+          "type":"number",
+          "example":250
+        }]
       },
       { "id":"vehicleStoptMoving",
         "title":{
@@ -307,7 +305,7 @@
         ],
         "tokens":[
           {
-            "name":"start_location",
+            "name":"locationStart",
             "title":{
               "en":"start address",
               "nl":"beginpunt"
@@ -318,7 +316,7 @@
               "nl":"Kalverstraat in Amsterdam"
             }
           },{
-            "name":"stop_location",
+            "name":"locationStop",
             "title":{
               "en":"end address",
               "nl":"bestemming"
@@ -329,13 +327,13 @@
               "nl":"Kalverstraat in Amsterdam"
             }
           },{
-            "name":"distance",
+            "name":"distanceTravelled",
             "title":{
-              "en":"distance travelled",
-              "nl":"afgelegde afstand"
+              "en":"distance trip",
+              "nl":"afstand rit"
             },
             "type":"number",
-            "example":2500.21
+            "example":65000
           }
         ]
       }

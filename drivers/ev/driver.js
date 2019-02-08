@@ -5,14 +5,30 @@ const Tesla = require('../../lib/tesla.js')
 
 class VehicleDriver extends Homey.Driver {
   onInit () {
-    this._flowtje = new Homey.FlowCardTriggerDevice('vehicleMoved').register()
+    this._triggerVehicleMoved = new Homey.FlowCardTriggerDevice('vehicleMoved').register()
+    this._triggerVehicleStartMoving = new Homey.FlowCardTriggerDevice('vehicleStartMoving').register()
+    this._triggerVehicleStoptMoving = new Homey.FlowCardTriggerDevice('vehicleStoptMoving').register()
   }
 
-  triggerflow (device, token, state) {
-    console.log('flow vehicleMoved', token, state)
-    this._flowtje.trigger(device, token, state)
-      .then(this.log)
-      .catch(this.error)
+  async triggerVehicleMoved (device, token) {
+    device.log('triggerVehicleMoved')
+    try {
+      await this._triggerVehicleMoved.trigger(device, token)
+    } catch (error) { return Promise.reject(error) }
+  }
+
+  async triggerVehicleStartMoving (device, token) {
+    device.log('triggerVehicleStartMoving')
+    try {
+      await this._triggerVehicleStartMoving.trigger(device, token)
+    } catch (error) { return Promise.reject(error) }
+  }
+
+  async triggerVehicleStoptMoving (device, tokens) {
+    device.log('triggerVehicleStoptMoving')
+    try {
+      await this._triggerVehicleStoptMoving.trigger(device, tokens)
+    } catch (error) { return Promise.reject(error) }
   }
 
   onPair (socket) {
