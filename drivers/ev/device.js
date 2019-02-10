@@ -51,6 +51,7 @@ class Vehicle extends Homey.Device {
       moving: null,
       battery: null,
       route: {},
+      routeCounter: device.getStoreValue('routeCounter') || 1,
       location: {}
     }
     vehicles[deviceId].teslaApi = new Tesla({
@@ -155,6 +156,7 @@ class Vehicle extends Homey.Device {
     vehicle.moving = vehicles[deviceId].moving
     vehicle.battery = vehicles[deviceId].battery
     vehicle.route = vehicles[deviceId].route
+    vehicle.routeCounter = vehicles[deviceId].routeCounter
     vehicle.location = vehicles[deviceId].location
     vehicle.routes = device.getStoreValue('routes') || []
     return vehicle
@@ -227,8 +229,8 @@ async function trackController (device) {
   if (vehicles[deviceId].batteryTrackerIntervalObject) clearInterval(vehicles[deviceId].batteryTrackerIntervalObject)
   if (!device.getAvailable()) return
 
-  await trackLocation(device, 0)
-  await trackBattery(device, 0)
+  await trackBattery(device)
+  await trackLocation(device, false)
 
   let settings = device.getSettings()
   let drivestate = device.getCapabilityValue('moving')
@@ -254,11 +256,11 @@ async function trackBattery (device) {
   return device.setCapabilityValue('measure_battery', chargeState.battery_level)
 }
 
-async function trackLocation (device) {
+async function trackLocation (device, rescheduleOnChange = true) {
   const deviceId = device.getData().id
   const vehicleId = device.getStoreValue('vehicleId')
   const wasMoving = vehicles[deviceId].moving
-  const previousLocation = vehicles[deviceId].location || {}
+  let previousLocation = vehicles[deviceId].location || null
   let isMoving = null
   let driveState
   let vehicleState
@@ -279,12 +281,13 @@ async function trackLocation (device) {
   vehicles[deviceId].moving = isMoving
   vehicles[deviceId].timeLastUpdate = new Date()
 
+  if (!previousLocation) previousLocation = newLocation
   let distanceMoved = formatValue((newOdometer - previousLocation.odometer) || 0)
   let distanceMovedSinceTrigger = formatValue(newOdometer - vehicles[deviceId].lastTriggerMovedOdometer) || distanceMoved
   let timeSinceTrigger = (new Date() - vehicles[deviceId].lastTriggerMovedTime) || 0
   let distanceHomey = Geo.calculateDistance(newLocation.latitude, newLocation.longitude, Homey.ManagerGeolocation.getLatitude(), Homey.ManagerGeolocation.getLongitude()) || 0
   distanceHomey = formatDistance(distanceHomey < 1 ? 0 : distanceHomey)
-  if (!vehicles[deviceId].route.start) vehicles[deviceId].route = {start: previousLocation, end: {}}
+  if (!vehicles[deviceId].route.start) vehicles[deviceId].route = {id: vehicles[deviceId].routeCounter + 1, start: previousLocation}
   let distanceTraveled = formatValue(vehicles[deviceId].location.odometer - vehicles[deviceId].route.start.odometer) || 0
 
   device.log('trackLocation', {isMoving, distanceHomey, distanceMoved, distanceMovedSinceTrigger, distanceTraveled, timeSinceTrigger})
@@ -294,7 +297,7 @@ async function trackLocation (device) {
   await device.setCapabilityValue('moving', isMoving)
   await device.setCapabilityValue('distance', distanceHomey)
 
-  if (isMoving &&
+  if ((isMoving || wasMoving) &&
     distanceMovedSinceTrigger > device.getSettings().retriggerRestrictDistance &&
     timeSinceTrigger > (device.getSettings().retriggerRestrictTime * 1000)) {
     await device.getDriver().triggerVehicleMoved(device, {distanceMoved: distanceMovedSinceTrigger, distanceTraveled})
@@ -305,6 +308,7 @@ async function trackLocation (device) {
   if (isMoving !== wasMoving) {
     if (isMoving) {
       await device.getDriver().triggerVehicleStartMoving(device, {distanceMoved: distanceMoved})
+      vehicles[deviceId].route = {id: vehicles[deviceId].routeCounter + 1, start: previousLocation, end: {}}
       vehicles[deviceId].route.start.time = new Date()
     } else if (wasMoving) {
       vehicles[deviceId].route.end = newLocation
@@ -315,15 +319,17 @@ async function trackLocation (device) {
         locationStart: vehicles[deviceId].route.start.place + ', ' + vehicles[deviceId].route.start.city,
         locationStop: vehicles[deviceId].route.end.place + ', ' + vehicles[deviceId].route.end.city
       })
+      vehicles[deviceId].routeCounter ++
+      device.setStoreValue('routeCounter', vehicles[deviceId].routeCounter)
       if (device.getSettings().tripTracking) {
         let routes = device.getStoreValue('routes') || []
         routes.push(vehicles[deviceId].route)
         device.setStoreValue('routes', routes.slice(-100))
+        vehicles[deviceId].route.start = vehicles[deviceId].route.end
       }
-      vehicles[deviceId].route.start = vehicles[deviceId].route.end
       delete vehicles[deviceId].route.end
     }
-    if (wasMoving !== null) return trackController(device)
+    if (wasMoving !== null && rescheduleOnChange) return trackController(device)
   }
 }
 
