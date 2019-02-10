@@ -1,0 +1,149 @@
+<html>
+<head>
+  <title>Tesla App Debug for Alpha and Beta release</title>
+  <!-- <meta name="viewport" content="width=device-width, initial-scale=1"> -->
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+  <script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap.min.js"></script>
+
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
+</head>
+<body>
+  <div class=container-fluid>
+    <h2>Tesla App Debug for Alpha and Beta release</h2>
+    <h3>Logged routes</h3>
+    <div class="panel panel-default">
+      <table class="table table-striped small" id="routes">
+        <thead>
+          <tr>
+            <th >Nr</th>
+            <th>Departure</th>
+            <th class="hidden-sm">From</th>
+            <th class="hidden-sm">Arrival</th>
+            <th>Destination</th>
+            <th>Duration</th>
+            <th>Distance</th>
+          </tr>
+        </thead>
+        <tbody />
+      </table>
+    </div>
+    <h3>Vehicle details</h3>
+    <div class="panel panel-default">
+      <table class="table-sm table-striped small" id="vehicles">
+        <thead>
+          <tr>
+            <th class="col-xs-2">Property</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody />
+      </table>
+    </div>
+  </div>
+  <script>
+  let vehicles
+  const pad = (n, z = 2) =>  ('00' + n).slice(-z)
+  const formatValue = (t, z = 1) => Math.round(t.toFixed(z) * (10 ** z)) / (10 ** z)
+  const mapsUrl = (latitude, longitude) => `https://www.google.com/maps/?q=${latitude},${longitude}`
+
+  function formatTime (epoch = new Date().getTime()) {
+    let t = new Date(epoch)
+    let y = t.getFullYear()
+    let m = pad(t.getMonth() + 1)
+    let d = pad(t.getDate())
+    return (`${y}-${m}-${d} ` + t.toTimeString().replace(/.*(\d{2}:\d{2}:\d{2}).*/, '$1'))
+  }
+
+  function formatMillis (s) {
+    let ms = s % 1000
+    s = (s - ms) / 1000
+    let secs = s % 60
+    s = (s - secs) / 60
+    let mins = s % 60
+    let hrs = (s - mins) / 60
+
+    return pad(hrs) + ':' + pad(mins) + ':' + pad(secs)
+  }
+
+
+  function formatDistance (distance) {
+    if (distance < 1000) return formatValue(distance) + ' m'
+    return formatValue(distance / 1000) + ' km'
+  }
+
+
+  function getVehicles () {
+    routeTable.clear()
+    vehicleTable.clear()
+    $.getJSON('../../../api/app/com.tesla/vehicles', (data) => {
+      vehicles = data
+      vehicles.forEach(showVehicle)
+    })
+
+  }
+
+  function showVehicle (vehicle) {
+    console.log({vehicle})
+    Object.keys(vehicle).forEach(property => {
+      let value = vehicle[property]
+      if (value && typeof value === 'object') value = '<pre class="small">' + JSON.stringify(vehicle[property], null, '  ') + '</pre>'
+
+      switch (property) {
+        case 'routes':
+          return
+        case 'location':
+          value += ` <a target="_new" href="${mapsUrl(vehicle[property].latitude,vehicle[property].longitude)}"><i class="fa fa-external-link"></i></a>`
+          break
+        case 'timeLastUpdate':
+        case 'lastTriggerMovedTime':
+          if (value) value = formatTime(value)
+      }
+      vehicleTable.row.add([
+        property,
+        value
+      ])
+    })
+    vehicle.routes.forEach(showRoute)
+    vehicleTable.draw()
+    routeTable.draw()
+  }
+
+  function showRoute (route) {
+    console.log({route})
+    var duration = new Date(route.end.time) - new Date(route.start.time)
+    routeTable.row.add([
+      route.id || 0,
+      formatTime(route.start.time),
+      `<a target="_new" href="${mapsUrl(route.start.latitude,route.start.longitude)}">${route.start.place}, ${route.start.city}</a><br><span class=small>${formatValue(route.start.odometer || 0, 0)}</span>`,
+      formatTime(route.end.time),
+      `<a target="_new" href="${mapsUrl(route.end.latitude,route.end.longitude)}">${route.end.place}, ${route.end.city}</a><br><span class=small>${formatValue(route.end.odometer || 0, 0)}</span>`,
+      formatMillis(duration),
+      formatDistance(route.end.odometer - route.start.odometer)
+    ])
+  }
+  var vehicleTable
+  var routeTable
+  $(document).ready( function () {
+    routeTable = $('#routes').DataTable({
+      paging: false,
+      searching: false,
+      select: false,
+      order: [[1, "desc"]]
+    })
+    vehicleTable = $('#vehicles').DataTable({
+      paging: false,
+      searching: false,
+      select: false,
+      order: [[0, "asc"]]
+    })
+    getVehicles()
+  })
+
+</script>
+</body>
+</html>
