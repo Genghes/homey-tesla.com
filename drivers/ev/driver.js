@@ -5,29 +5,61 @@ const Tesla = require('../../lib/tesla.js')
 
 class VehicleDriver extends Homey.Driver {
   onInit () {
+    // todo: move to triggers lib
+    this._triggerVehicleGeofenceEntered = new Homey.FlowCardTriggerDevice('vehicleGeofenceEntered')
+      .registerRunListener((args, state) => Promise.resolve(args.geofence.id === state.geofenceId))
+      .register()
+    this._triggerVehicleGeofenceEntered
+      .getArgument('geofence')
+      .registerAutocompleteListener(this.geofenceAutocomplete)
+    this._triggerVehicleGeofenceLeft = new Homey.FlowCardTriggerDevice('vehicleGeofenceLeft')
+      .registerRunListener((args, state) => Promise.resolve(args.geofence.id === state.geofenceId))
+      .register()
+    this._triggerVehicleGeofenceLeft
+      .getArgument('geofence')
+      .registerAutocompleteListener(this.geofenceAutocomplete)
     this._triggerVehicleMoved = new Homey.FlowCardTriggerDevice('vehicleMoved').register()
     this._triggerVehicleStartMoving = new Homey.FlowCardTriggerDevice('vehicleStartMoving').register()
     this._triggerVehicleStoptMoving = new Homey.FlowCardTriggerDevice('vehicleStoptMoving').register()
   }
 
-  async triggerVehicleMoved (device, token) {
-    device.log('triggerVehicleMoved')
+  geofenceAutocomplete (value) {
+    let geofences = Homey.ManagerSettings.get('geofences')
+    return geofences.filter(x => x.name.toUpperCase().indexOf(value.toUpperCase() > 0))
+  }
+
+  async triggerVehicleGeofenceEntered (device, state) {
+    device.log('triggerVehicleGeofenceEntered', state)
     try {
-      await this._triggerVehicleMoved.trigger(device, token)
+      await device.getDriver()._triggerVehicleGeofenceEntered.trigger(device, null, state)
+    } catch (error) { return Promise.reject(error) }
+  }
+
+  async triggerVehicleGeofenceLeft (device, state) {
+    device.log('triggerVehicleGeofenceLeft', state)
+    try {
+      await device.getDriver()._triggerVehicleGeofenceLeft.trigger(device, null, state)
+    } catch (error) { return Promise.reject(error) }
+  }
+
+  async triggerVehicleMoved (device, tokens) {
+    device.log('triggerVehicleMoved', tokens)
+    try {
+      await device.getDriver()._triggerVehicleMoved.trigger(device, tokens)
     } catch (error) { return Promise.reject(error) }
   }
 
   async triggerVehicleStartMoving (device, token) {
     device.log('triggerVehicleStartMoving')
     try {
-      await this._triggerVehicleStartMoving.trigger(device, token)
+      await device.getDriver()._triggerVehicleStartMoving.trigger(device, token)
     } catch (error) { return Promise.reject(error) }
   }
 
   async triggerVehicleStoptMoving (device, tokens) {
     device.log('triggerVehicleStoptMoving')
     try {
-      await this._triggerVehicleStoptMoving.trigger(device, tokens)
+      await device.getDriver()._triggerVehicleStoptMoving.trigger(device, tokens)
     } catch (error) { return Promise.reject(error) }
   }
 

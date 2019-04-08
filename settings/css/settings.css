@@ -1,0 +1,19 @@
+td {
+  overflow-wrap: break-word;
+}
+
+/* Geofence */
+#map {
+  height: 100%;
+}
+#map-canvas {
+  height: 600px;
+  width: 100%;
+  margin: 0px;
+  margin-top: 7px;
+  margin-bottom: -7px;
+  padding: 0px
+}
+#map-canvas img {
+  max-width: inherit;
+}

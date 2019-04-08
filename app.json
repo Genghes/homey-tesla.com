@@ -1,6 +1,6 @@
 {
   "id":"com.tesla",
-  "version":"2.0.0",
+  "version":"2.1.0",
   "compatibility":">=2.0.2",
   "sdk": 2,
   "name":{
@@ -43,8 +43,32 @@
       },
       "getable": true,
       "setable": false,
+      "preventTag": true,
       "uiComponent": "sensor",
       "icon": "./drivers/ev/assets/distance.svg"
+    },
+    "distance_nr": {
+      "type": "number",
+      "title": {
+        "en": "Distance from Homey",
+        "nl": "Afstand tot Homey"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": null,
+      "icon": "./drivers/ev/assets/distance.svg"
+    },
+    "geofences": {
+      "type": "string",
+      "title": {
+        "en": "Geofence",
+        "nl": "Geofence"
+      },
+      "getable": true,
+      "setable": false,
+      "preventTag": true,
+      "uiComponent": "sensor",
+      "icon": "./drivers/ev/assets/geofence.svg"
     },
     "location_human": {
       "type": "string",
@@ -89,7 +113,7 @@
         "small":"drivers/ev/assets/images/small_s.jpg"
       },
       "class":"other",
-      "capabilities":["distance", "location_human", "moving", "measure_battery"],
+      "capabilities":["distance", "distance_nr", "location_human", "moving", "geofences", "measure_battery"],
       "settings":[
         {
           "type":"group",
@@ -109,10 +133,10 @@
             { "id":"tripTracking",
               "type":"checkbox",
               "label":{
-                "en":"Save last 100 trips (for debugging purposes)",
-                "nl":"Laatste 100 ritten opslaan (analyse en debug optie)"
+                "en":"Save last 100 trips",
+                "nl":"Laatste 100 ritten opslaan"
               },
-              "value": false
+              "value": true
             },
             { "id":"locationIntervalDriving",
               "type":"number",
@@ -199,7 +223,6 @@
             "en":"Account settings - reconfigure a changed password. This password will not be saved on Homey.",
             "nl":"Instellingen account - geef hier een gewijzigd wachtwoord op. Het wachtwoord wordt niet opgeslagen op Homey."
           },
-
           "children":[
             { "id":"password",
               "type":"password",
@@ -207,6 +230,23 @@
                 "en":"New password",
                 "nl":"Nieuw wachtwoord"
               }
+            }
+          ]
+        },
+        {
+          "type":"group",
+          "label":{
+            "en":"Security - allow access to device and route details via the app settings screen. With this setting enabled unauthenticated users with knowledge of your Homey-cloud-id can view these details.",
+            "nl":"Beveiliging - toegang toestaan tot routes via het scherm met app-instellingen. Als deze instelling actief is kunnen ongeautoriseerde gebruikers die uw Homey-cloud-id kennen deze gegevens inzien."
+          },
+          "children":[
+            { "id":"apiAccess",
+              "type":"checkbox",
+              "label":{
+                "en":"Show on settings screen",
+                "nl":"Toon op instellingen scherm"
+              },
+              "value": false
             }
           ]
         }
@@ -239,6 +279,46 @@
   ],
   "flow": {
     "triggers":[
+      { "id":"vehicleGeofenceEntered",
+        "title":{
+          "en":"Entered geofence",
+          "nl":"Betreed geofence"
+        },
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter":"driver_id=ev"
+          },{
+            "name": "geofence",
+            "type": "autocomplete",
+            "placeholder": {
+              "en": "select geofence",
+              "nl": "kies geofence"
+            }
+          }
+        ]
+      },
+      { "id":"vehicleGeofenceLeft",
+        "title":{
+          "en":"Left geofence",
+          "nl":"Verlaat geofence"
+        },
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter":"driver_id=ev"
+          },{
+            "name": "geofence",
+            "type": "autocomplete",
+            "placeholder": {
+              "en": "select geofence",
+              "nl": "kies geofence"
+            }
+          }
+        ]
+      },
       { "id":"vehicleMoved",
         "title":{
           "en":"Location changed",
@@ -260,7 +340,7 @@
           "type":"number",
           "example":250
         },{
-          "name":"distanceTravelled",
+          "name":"distanceTraveled",
           "title":{
             "en":"distance trip",
             "nl":"afstand rit"
@@ -327,7 +407,7 @@
               "nl":"Kalverstraat in Amsterdam"
             }
           },{
-            "name":"distanceTravelled",
+            "name":"distanceTraveled",
             "title":{
               "en":"distance trip",
               "nl":"afstand rit"
@@ -400,6 +480,26 @@
             "name": "device",
             "type": "device",
             "filter":"driver_id=ev"
+          }
+        ]
+      },
+      { "id":"vehicleGeofence",
+        "title":{
+          "en":"Is !{{|not}} in geofence",
+          "nl":"Is !{{|niet}} in geofence"
+        },
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter":"driver_id=ev"
+          },{
+            "name": "geofence",
+            "type": "autocomplete",
+            "placeholder": {
+              "en": "select geofence",
+              "nl": "kies geofence"
+            }
           }
         ]
       },

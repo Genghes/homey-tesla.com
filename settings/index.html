@@ -1,55 +1,109 @@
+<!DOCTYPE html>
 <html>
 <head>
   <title>Tesla App Debug for Alpha and Beta release</title>
-  <!-- <meta name="viewport" content="width=device-width, initial-scale=1"> -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
   <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+  <!-- <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=false&libraries=drawing"></script> -->
+  <script type="text/javascript" defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD7ws4EzvN2FvVj8nHU9BlbcUsY5tw9BKs&libraries=drawing"></script>
+  <script type="text/javascript" src="js/geofence.js"></script>
 
   <script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap4.min.js"></script>
 
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css">
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="../../../manager/webserver/assets/css/homey.css">
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
 </head>
 <body>
-  <div class=container-fluid>
-    <h2>Tesla App Debug for Alpha and Beta release</h2>
-    <h3>Logged routes</h3>
-    <div class="panel panel-default">
-      <table class="table table-striped small" id="routes">
-        <thead>
-          <tr>
-            <th >Nr</th>
-            <th>Departure</th>
-            <th class="hidden-sm">From</th>
-            <th class="hidden-sm">Arrival</th>
-            <th>Destination</th>
-            <th>Duration</th>
-            <th>Distance</th>
-          </tr>
-        </thead>
-        <tbody />
-      </table>
+  <div id="topcontainer" class="container-fluid">
+    <div id="alertBlocked" class="alert alert-danger" role="alert">
+      Enable 'API access for settings' on the device advanced settings screen. Be aware that anyone with knowledge of your Homey's Cloud ID can access this page.
     </div>
-    <h3>Vehicle details</h3>
-    <div class="panel panel-default">
-      <table class="table-sm table-striped small" id="vehicles">
-        <thead>
-          <tr>
-            <th class="col-xs-2">Property</th>
-            <th>Value</th>
-          </tr>
-        </thead>
-        <tbody />
-      </table>
+    <ul class="nav nav-tabs m-0" id="myTab" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" id="geofences-tab" data-toggle="tab" href="#geofences" role="tab" aria-controls="geofences" aria-selected="false">Geofences</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="routes-tab" data-toggle="tab" href="#routes" role="tab" aria-controls="routes" aria-selected="false">Trips</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="car-tab" data-toggle="tab" href="#car" role="tab" aria-controls="car" aria-selected="true">Debug</a>
+      </li>
+    </ul>
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="geofences" role="tabpanel" aria-labelledby="geofences-tab">
+        <p>
+        <div id="alertUrlSuggestion" class="alert alert-info" style="overflow-wrap: break-word;" role="alert">
+          <p>View this page in a browser via <span id="url1"></span> or <span id="url2"></span> if you want to configure your geofences.
+        </div>
+        <p>
+        <fieldset class="map">
+          <strong data-i18n="settings.geofences.title">Geofences</strong>&nbsp;
+          <button id="addGeofence" onClick="addGeofence()"><i class="fa fa-plus"></i></button>&nbsp;
+          <input id="newGeofence" name="newGeofence" placeholder="New geofence name">
+          <select id="listGeofences" name="listGeofences" onChange="changeGeofenceList()">
+          </select>&nbsp;
+          <!-- todo <button id="editGeofence" onClick="editGeofence()"><i class="fa fa-pencil"></i></button>&nbsp;
+          <button id="delGeofence" onClick="deleteGeofence()"><i class="fa fa-trash-o"></i></button>&nbsp; -->
+          <!-- | <span style="white-space:nowrap"><strong>Show</strong>&nbsp;
+            <input type="checkbox" id="showRoutes" onChange="showRoutesChange()">Routes</span>
+          </span> -->
+          <div id="map-canvas"></div>
+        </fieldset>
+      </div>
+      <div class="tab-pane fade" id="routes" role="tabpanel" aria-labelledby="routes-tab">
+        <p>
+        <p>Enable "Save last 100 trips" in the device advanced settings screen and trips will be listed here.
+        <table class="table table-striped compact" id="table-routes">
+          <thead>
+            <tr>
+              <th>Nr</th>
+              <th>Departure</th>
+              <th>From</th>
+              <th>Arrival</th>
+              <th>Destination</th>
+              <th>Duration</th>
+              <th>Distance</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="tab-pane fade" id="car" role="tabpanel" aria-labelledby="car-tab">
+        <p>
+        <div id="alertNoDevices" class="alert alert-primary" role="alert">
+          You'll have to pair your car first on the devices screen before this settings page is getting interesting!
+        </div>
+        <p>
+        <p>Details from the inner workings of this app.
+        <table class="table table-striped compact" id="table-vehicles">
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p>
+        <p>Settings screen is in <strong id="settingsMode"></strong> mode.
+      </div>
     </div>
   </div>
   <script>
-  let vehicles
   const pad = (n, z = 2) =>  ('00' + n).slice(-z)
   const formatValue = (t, z = 1) => Math.round(t.toFixed(z) * (10 ** z)) / (10 ** z)
   const mapsUrl = (latitude, longitude) => `https://www.google.com/maps/?q=${latitude},${longitude}`
+
+  let vehicles
+  let mode         // private | public | blocked
+  let vehicleTable
+  let routeTable
 
   function formatTime (epoch = new Date().getTime()) {
     let t = new Date(epoch)
@@ -76,32 +130,60 @@
     return formatValue(distance / 1000) + ' km'
   }
 
+  async function api (method, path, body) {
+    console.log({method, path, body})
+    if (method !== 'GET' && method !== 'PUT') return null
+    if (!mode || mode === 'blocked') return null
+    return new Promise((resolve, reject) => {
+      if (mode === 'private') {
+        Homey.api(method, path, body, (error, data) => {
+          if (error) reject(error)
+          return resolve(data)
+        })
+      } else if (mode === 'public') {
+        if (method === 'GET') {
+          $.getJSON('../../../api/app/com.tesla/public' + path, data => {
+            return resolve(data)
+          })
+        } else if (method === 'PUT') {
+          $.ajax({
+            url: '../../../api/app/com.tesla/public' + path,
+            type: 'PUT',
+            data: {data: JSON.stringify(body)},
+            dataType: 'json',
+            success: resolve,
+            error: reject
+          })
+        }
+      }
+    })
+  }
 
-  function getVehicles () {
+
+  async function getVehicles () {
     routeTable.clear()
     vehicleTable.clear()
-    $.getJSON('../../../api/app/com.tesla/vehicles', (data) => {
-      vehicles = data
-      vehicles.forEach(showVehicle)
-    })
 
+    vehicles = await api('GET', '/vehicles')
+    if (!vehicles) return $('#alertNoDevices').show()
+    vehicles.forEach(showVehicle)
   }
 
   function showVehicle (vehicle) {
-    console.log({vehicle})
     Object.keys(vehicle).forEach(property => {
       let value = vehicle[property]
       if (value && typeof value === 'object') value = '<pre class="small">' + JSON.stringify(vehicle[property], null, '  ') + '</pre>'
-
-      switch (property) {
-        case 'routes':
+      if (value) {
+        switch (property) {
+          case 'routes':
           return
-        case 'location':
+          case 'location':
           value += ` <a target="_new" href="${mapsUrl(vehicle[property].latitude,vehicle[property].longitude)}"><i class="fa fa-external-link"></i></a>`
           break
-        case 'timeLastUpdate':
-        case 'lastTriggerMovedTime':
+          case 'timeLastUpdate':
+          case 'lastTriggerMovedTime':
           if (value) value = formatTime(value)
+        }
       }
       vehicleTable.row.add([
         property,
@@ -114,34 +196,84 @@
   }
 
   function showRoute (route) {
-    console.log({route})
-    var duration = new Date(route.end.time) - new Date(route.start.time)
+    var duration = new Date(route.end.time) - new Date(route.start.time) || 0
     routeTable.row.add([
       route.id || 0,
-      formatTime(route.start.time),
-      `<a target="_new" href="${mapsUrl(route.start.latitude,route.start.longitude)}">${route.start.place}, ${route.start.city}</a><br><span class=small>${formatValue(route.start.odometer || 0, 0)}</span>`,
-      formatTime(route.end.time),
-      `<a target="_new" href="${mapsUrl(route.end.latitude,route.end.longitude)}">${route.end.place}, ${route.end.city}</a><br><span class=small>${formatValue(route.end.odometer || 0, 0)}</span>`,
+      route.start ? formatTime(route.start.time) : '',
+      route.start ? `<a target="_new" href="${mapsUrl(route.start.latitude,route.start.longitude)}">${route.start.place}, ${route.start.city}</a><br><span class=small>${formatValue(route.start.odometer || 0, 0)}</span>` : '',
+      route.end ? formatTime(route.end.time) : '',
+      route.end ? `<a target="_new" href="${mapsUrl(route.end.latitude,route.end.longitude)}">${route.end.place}, ${route.end.city}</a><br><span class=small>${formatValue(route.end.odometer || 0, 0)}</span>` : '',
       formatMillis(duration),
-      formatDistance(route.end.odometer - route.start.odometer)
+      formatDistance((route.end.odometer - route.start.odometer) || 0)
     ])
   }
-  var vehicleTable
-  var routeTable
-  $(document).ready( function () {
-    routeTable = $('#routes').DataTable({
+
+  function inSandbox () {
+    try {
+      var x = window.parent.href
+      return false
+    } catch (reason) {
+      return true
+    }
+  }
+
+  function onHomeyReady (Homey) {
+    initPage(Homey)
+  }
+
+  async function initPage (Homey) {
+    mode = await determineMode(Homey)
+    console.log(mode)
+
+    $("#alertNoDevices").hide()
+    $("#alertUrlSuggestion").hide()
+    $("#alertBlocked").hide()
+
+    routeTable = $('#table-routes').DataTable({
       paging: false,
       searching: false,
       select: false,
       order: [[1, "desc"]]
     })
-    vehicleTable = $('#vehicles').DataTable({
+    vehicleTable = $('#table-vehicles').DataTable({
       paging: false,
       searching: false,
       select: false,
       order: [[0, "asc"]]
     })
-    getVehicles()
+
+    $('#settingsMode').html(mode)
+    if (mode === 'private') {
+      $('#topcontainer').addClass('p-0')  // minimize padding
+      let urls = await api('GET', '/url')
+      $('#url1').html(`<a class="alert-link" href="${urls[0]}">${urls[0]}</a>`)
+      $('#url2').html(`<a class="alert-link" href="${urls[1]}">${urls[1]}</a>`)
+      $('#alertUrlSuggestion').show()
+    } else if (mode === 'blocked') {
+      $("#topcontainer").addClass('pt-2')
+      $('#alertBlocked').show()
+      return
+    } else if (mode === 'public') {
+      $("#topcontainer").addClass('pt-2')
+    }
+    await getVehicles()
+    initGeofences()
+    $('link[href$="homey.css"').remove()
+    $('#map-canvas').css('height', '700px')
+    if (Homey) Homey.ready()
+  }
+
+  async function determineMode (Homey) {
+    if (Homey) return 'private'
+    return new Promise(function (resolve) {
+      $.getJSON('../../../api/app/com.tesla/apiAccess', (data) => {
+        resolve(data ? 'public' : 'blocked')
+      })
+    })
+  }
+
+  $(document).ready( function () {
+    if (!inSandbox()) initPage(null)
   })
 
 </script>
