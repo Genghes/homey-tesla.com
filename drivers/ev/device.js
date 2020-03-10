@@ -10,6 +10,7 @@ const maxApiErrors = 5
 
 let vehicles = {}
 let geofences = {}
+let passwordAttempt = 0
 
 class Vehicle extends Homey.Device {
   onDeleted () {
@@ -36,7 +37,8 @@ class Vehicle extends Homey.Device {
     await device.setSettings({password: ''})
     await device.setAvailable()
     device.log('##### TESLA onInit #####', {Homey: Homey.version, App: Homey.manifest.version, Device: deviceId})
-    device.log('settings', device.getSettings())
+	device.log('Torstein Edition')
+	device.log('settings', device.getSettings())
     vehicles[deviceId] = {
       id: deviceId,
       name: device.getName(),
@@ -45,6 +47,7 @@ class Vehicle extends Homey.Device {
       locationTrackerIntervalObject: null,
       apiErrors: 0,
       retryTrackingTimeoutId: null,
+	  retryFailedLoginId: null,
       timeLastUpdate: null,
       lastTriggerMovedTime: null,
       lastTriggerMovedOdometer: null,
@@ -60,11 +63,23 @@ class Vehicle extends Homey.Device {
       language: Homey.ManagerI18n.getLanguage()
     })
     vehicles[deviceId].teslaApi.on('invalid_user_password', async () => {
-      device.log('Device unavailable due to invalid account / username / password')
-      device.setUnavailable(Homey.__('device.errorAccountAccess'))
-      let notification = new Homey.Notification({excerpt: Homey.__('device.errorAccountAccessNotification')})
-      await notification.register()
-      await device.trackController()
+	  if (device.getSetting('loginRetry') == true && passwordAttempt == 0) {
+	    let notification = new Homey.Notification({excerpt: 'API returned invalid_user_password, Retrying..'})
+		await notification.register()
+		vehicles[deviceId].retryFailedLoginId = setTimeout(async () => {
+	  	  device.log('restart tracking after login error timeout')
+	  	  await device.logAvailable()
+	  	  let notification = new Homey.Notification({excerpt: 'Device enabled after login failed timeout'})
+		  await notification.register()
+		  device.trackController()
+	  	}, device.getSetting('loginRetryInterval') * 60 * 1000)
+	  } else {
+		device.log('Device unavailable due to invalid account / username / password')
+		device.setUnavailable(Homey.__('device.errorAccountAccess'))
+		let notification = new Homey.Notification({excerpt: Homey.__('device.errorAccountAccessNotification')})
+		await notification.register()
+		await device.trackController()
+	  }
     })
     vehicles[deviceId].teslaApi.on('error', async reason => {
       vehicles[deviceId].apiErrors ++
@@ -103,6 +118,7 @@ class Vehicle extends Homey.Device {
 
     if (changedKeysArr.find(key => key === 'password') && newSettingsObj.password !== '') {
       device.log('try new password')
+	  passwordAttempt = 1
       let teslaSession = new Tesla({
         user: device.getStoreValue('username'),
         password: newSettingsObj.password
@@ -114,9 +130,12 @@ class Vehicle extends Homey.Device {
       await teslaSession.login().then(() => {
         device.log('tesla login success')
         reInit = true
-        return device.logAvailable()
+		passwordAttempt = 0
+        device.logAvailable()
+		//return 
       }).catch(error => {
         device.log('tesla login error', error)
+		device.setUnavailable('Your Tesla is Unavailable, Invalid credentials.')
         throw new Error('Invalid password')
       })
     }
@@ -255,7 +274,8 @@ class Vehicle extends Homey.Device {
     const device = this
     const deviceId = device.getData().id
     const vehicleId = device.getStoreValue('vehicleId')
-    let chargeState
+    if (!device.getAvailable()) return
+	let chargeState
     try {
       chargeState = await vehicles[deviceId].teslaApi.getChargeState(vehicleId)
     } catch (reason) { return device.log('trackBattery Api error') } // ignored becouse of emmitted error on teslaApi handled in onInit()
@@ -274,6 +294,7 @@ class Vehicle extends Homey.Device {
     const deviceId = device.getData().id
     const vehicleId = device.getStoreValue('vehicleId')
     const wasMoving = vehicles[deviceId].moving
+    if (!device.getAvailable()) return
     let previousLocation = vehicles[deviceId].location || null
     let isMoving = null
     let driveState
@@ -306,7 +327,7 @@ class Vehicle extends Homey.Device {
     // if (!vehicles[deviceId].route.start) vehicles[deviceId].route = {id: vehicles[deviceId].routeCounter + 1, start: previousLocation}
     let distanceTraveled = (vehicles[deviceId].route.start && vehicles[deviceId].location.odometer) ? formatValue(vehicles[deviceId].location.odometer - vehicles[deviceId].route.start.odometer) : 0
 
-    device.log('trackLocation', {isMoving, distanceMovedSinceTrigger, timeSinceTrigger, distanceTraveled})
+    device.log('trackLocation', {isMoving, distanceMovedSinceTrigger, timeSinceTrigger, distanceTraveled, passwordAttempt})
 
     await device.logAvailable()
     await device.setCapabilityValue('location_human', driveState.place + ', ' + driveState.city)
