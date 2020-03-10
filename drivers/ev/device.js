@@ -37,7 +37,6 @@ class Vehicle extends Homey.Device {
     await device.setSettings({password: ''})
     await device.setAvailable()
     device.log('##### TESLA onInit #####', {Homey: Homey.version, App: Homey.manifest.version, Device: deviceId})
-	device.log('Torstein Edition')
 	device.log('settings', device.getSettings())
     vehicles[deviceId] = {
       id: deviceId,
