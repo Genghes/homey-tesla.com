@@ -1,6 +1,6 @@
 {
   "id":"com.tesla",
-  "version":"2.1.0",
+  "version":"2.1.1",
   "compatibility":">=2.0.2",
   "sdk": 2,
   "name":{
@@ -114,6 +114,9 @@
       },
       "class":"other",
       "capabilities":["distance", "distance_nr", "location_human", "moving", "geofences", "measure_battery"],
+	  "energy": {
+		"batteries": [ "INTERNAL" ]
+	  },
       "settings":[
         {
           "type":"group",
@@ -229,6 +232,26 @@
               "label":{
                 "en":"New password",
                 "nl":"Nieuw wachtwoord"
+              }
+            },
+            { "id":"loginRetry",
+              "type":"checkbox",
+              "label":{
+                "en":"Retry token login if API fails",
+                "nl":"Retry token login if API fails"
+              },
+              "value": true
+            },
+            { "id":"loginRetryInterval",
+              "type":"number",
+              "label":{
+                "en":"Retry token login interval (minutes)",
+                "nl":"Retry token login interval (minutes)"
+              },
+              "value": 1,
+              "attr":{
+                "min": 1,
+                "max": 1440
               }
             }
           ]
