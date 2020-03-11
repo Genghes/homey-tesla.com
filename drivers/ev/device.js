@@ -7,7 +7,7 @@ const Geo = require('../../lib/geofences.js')
 const mi2km = 1.609344
 const retryTrackingTimeoutS = 5 * 60
 const maxApiErrors = 5
-
+let trackControllerCount = 0
 let vehicles = {}
 let geofences = {}
 
@@ -45,6 +45,7 @@ class Vehicle extends Homey.Device {
       locationTrackerIntervalObject: null,
       apiErrors: 0,
       retryTrackingTimeoutId: null,
+      retryTokenTimeoutId: null,
       timeLastUpdate: null,
       lastTriggerMovedTime: null,
       lastTriggerMovedOdometer: null,
@@ -55,16 +56,28 @@ class Vehicle extends Homey.Device {
       location: null,
       geofences: []
     }
+    console.log(device.getStoreValue('grant'))
     vehicles[deviceId].teslaApi = new Tesla({
+      user: device.getStoreValue('username'),
       grant: device.getStoreValue('grant'),
       language: Homey.ManagerI18n.getLanguage()
     })
     vehicles[deviceId].teslaApi.on('invalid_user_password', async () => {
-      device.log('Device unavailable due to invalid account / username / password')
-      device.setUnavailable(Homey.__('device.errorAccountAccess'))
-      let notification = new Homey.Notification({excerpt: Homey.__('device.errorAccountAccessNotification')})
-      await notification.register()
-      await device.trackController()
+      device.log('invalid_user_pasword event triggered')
+      if (device.getSetting('loginRetry') && !vehicles[deviceId].retryTokenTimeoutId) {
+        vehicles[deviceId].retryTokenTimeoutId = setTimeout(async () => {
+          device.log('restart tracking after login error timeout')
+          vehicles[deviceId].retryTrackingTimeoutId = null
+          await device.logAvailable()
+          device.trackController()
+        }, device.getSetting('tokenRetryInterval') * 60 * 1000)
+      } else {
+        device.log('Device unavailable due to invalid account / username / password')
+        device.setUnavailable(Homey.__('device.errorAccountAccess'))
+        let notification = new Homey.Notification({excerpt: Homey.__('device.errorAccountAccessNotification')})
+        await notification.register()
+        await device.trackController()
+      }
     })
     vehicles[deviceId].teslaApi.on('error', async reason => {
       vehicles[deviceId].apiErrors ++
@@ -227,16 +240,29 @@ class Vehicle extends Homey.Device {
     })
   }
 
+  // todo make trackController handler to prevent multiple threads by changeing multiple settings at once.
+  async trackControllerBuffer () {
+    const device = this
+    device.log('trackController start', trackControllerCount)
+    if (trackControllerCount > 0) {
+      setTimeout(device.trackControllerBuffer, 500)
+    } else {
+      await device.trackController()
+    }
+    device.log('trackControllerBuffer end', trackControllerCount)
+  }
+
   async trackController () {
   // called after init, settings changed, changeddrivestate
     const device = this
-    device.log('trackController')
+    trackControllerCount++
+    device.log('trackController', trackControllerCount)
     let deviceId = device.getData().id
     if (vehicles[deviceId].retryTrackingTimeoutId) clearTimeout(vehicles[deviceId].retryTrackingTimeoutId)
     vehicles[deviceId].retryTrackingTimeoutId = null
     if (vehicles[deviceId].locationTrackerIntervalObject) clearInterval(vehicles[deviceId].locationTrackerIntervalObject)
     if (vehicles[deviceId].batteryTrackerIntervalObject) clearInterval(vehicles[deviceId].batteryTrackerIntervalObject)
-    if (!device.getAvailable()) return
+    if (!device.getAvailable()) return trackControllerCount--
 
     await device.trackBattery()
     await device.trackLocation(false)
@@ -249,12 +275,14 @@ class Vehicle extends Homey.Device {
     device.log('trackController setting', {location: intervalLocation, battery: intervalBattery})
     if (intervalLocation > 0) vehicles[deviceId].locationTrackerIntervalObject = setInterval(() => device.trackLocation(), intervalLocation * 1000)
     if (intervalBattery > 0) vehicles[deviceId].batteryTrackerIntervalObject = setInterval(() => device.trackBattery(), intervalBattery * 1000)
+    trackControllerCount--
   }
 
   async trackBattery () {
     const device = this
     const deviceId = device.getData().id
     const vehicleId = device.getStoreValue('vehicleId')
+    if (!device.getAvailable()) return
     let chargeState
     try {
       chargeState = await vehicles[deviceId].teslaApi.getChargeState(vehicleId)
@@ -273,6 +301,7 @@ class Vehicle extends Homey.Device {
     const device = this
     const deviceId = device.getData().id
     const vehicleId = device.getStoreValue('vehicleId')
+    if (!device.getAvailable()) return
     const wasMoving = vehicles[deviceId].moving
     let previousLocation = vehicles[deviceId].location || null
     let isMoving = null
