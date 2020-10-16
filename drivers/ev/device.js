@@ -72,11 +72,13 @@ class Vehicle extends Homey.Device {
           device.trackController()
         }, device.getSetting('tokenRetryInterval') * 60 * 1000)
       } else {
-        device.log('Device unavailable due to invalid account / username / password')
-        device.setUnavailable(Homey.__('device.errorAccountAccess'))
-        let notification = new Homey.Notification({excerpt: Homey.__('device.errorAccountAccessNotification')})
-        await notification.register()
-        await device.trackController()
+        if (!device.getSetting('endlessRetries')) {
+          device.log('Device unavailable due to invalid account / username / password')
+          device.setUnavailable(Homey.__('device.errorAccountAccess'))
+          let notification = new Homey.Notification({excerpt: Homey.__('device.errorAccountAccessNotification')})
+          await notification.register()
+          await device.trackController()
+        }
       }
     })
     vehicles[deviceId].teslaApi.on('error', async reason => {

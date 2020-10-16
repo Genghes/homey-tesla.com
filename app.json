@@ -1,6 +1,6 @@
 {
   "id":"com.tesla",
-  "version":"2.1.2",
+  "version":"2.1.3",
   "compatibility":">=2.0.2",
   "sdk": 2,
   "name":{
@@ -253,6 +253,14 @@
                "min": 1,
                "max": 1440
              }
+           },
+            { "id":"endlessRetries",
+             "type":"checkbox",
+             "label":{
+               "en":"Endless API retries",
+               "nl":"Eindeloze API-pogingen"
+             },
+             "value": false
            }
           ]
         },
