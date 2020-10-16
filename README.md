@@ -30,6 +30,7 @@ Control your Tesla Model S, 3 and X!
 - Valet mode on/off
 - Activate valet mode with PIN
 - Wake up from sleep state
+- Change settings for polling by flow
 
 # Disclaimer
 

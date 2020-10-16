@@ -1,6 +1,6 @@
 {
   "id":"com.tesla",
-  "version":"2.1.1",
+  "version":"2.1.2",
   "compatibility":">=2.0.2",
   "sdk": 2,
   "name":{
@@ -114,9 +114,9 @@
       },
       "class":"other",
       "capabilities":["distance", "distance_nr", "location_human", "moving", "geofences", "measure_battery"],
-	  "energy": {
-		"batteries": [ "INTERNAL" ]
-	  },
+      "energy": {
+        "batteries": ["INTERNAL"]
+      },
       "settings":[
         {
           "type":"group",
@@ -162,7 +162,7 @@
               "value": 120,
               "attr":{
                 "min": 10,
-                "max": 600
+                "max": 1800
               }
             },
             { "id":"batteryPolling",
@@ -234,26 +234,26 @@
                 "nl":"Nieuw wachtwoord"
               }
             },
-            { "id":"loginRetry",
-              "type":"checkbox",
-              "label":{
-                "en":"Retry token login if API fails",
-                "nl":"Retry token login if API fails"
-              },
-              "value": true
-            },
-            { "id":"loginRetryInterval",
-              "type":"number",
-              "label":{
-                "en":"Retry token login interval (minutes)",
-                "nl":"Retry token login interval (minutes)"
-              },
-              "value": 1,
-              "attr":{
-                "min": 1,
-                "max": 1440
-              }
-            }
+            { "id":"tokenRetry",
+             "type":"checkbox",
+             "label":{
+               "en":"Retry access on API fail",
+               "nl":"Opnieuw proberen toegang te krijgen bij API issues"
+             },
+             "value": true
+           },
+           { "id":"tokenRetryInterval",
+             "type":"number",
+             "label":{
+               "en":"Retry access interval (minutes)",
+               "nl":"Wachttijd opnieuw proberen (minuten)"
+             },
+             "value": 1,
+             "attr":{
+               "min": 1,
+               "max": 1440
+             }
+           }
           ]
         },
         {
@@ -813,6 +813,61 @@
             "step": 1,
             "label": "%",
             "labelDecimals": 0
+          }
+        ]
+      },
+      { "id":"setSettingBool",
+        "title":{
+           "en":"Change on/off setting",
+           "nl":"Wijzigen aan/uit instelling"
+        },
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter":"driver_id=ev"
+          },{
+            "name": "setting",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "locationPolling",
+                "label": {
+                  "en": "Track location", "nl": "Locatie volgen"
+                }
+              },{
+                "id": "tripTracking",
+                "label": {
+                  "en": "Save last 100 trips", "nl": "Laatste 100 ritten opslaan"
+                }
+              },{
+                "id": "batteryPolling",
+                "label": {
+                  "en": "Poll battery level", "nl": "Accuniveau bijhouden"
+                }
+              },{
+                "id": "apiAccess",
+                "label": {
+                  "en": "Show on settings screen", "nl": "Toon op instellingen scherm"
+                }
+              }
+            ]
+          },{
+            "name": "value",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "OFF",
+                "label": {
+                  "en": "Off", "nl": "Uit"
+                }
+              },{
+                "id": "ON",
+                "label": {
+                  "en": "On", "nl": "Aan"
+                }
+              }
+            ]
           }
         ]
       },
