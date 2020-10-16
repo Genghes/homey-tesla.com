@@ -36,7 +36,7 @@ class Vehicle extends Homey.Device {
     await device.setSettings({password: ''})
     await device.setAvailable()
     device.log('##### TESLA onInit #####', {Homey: Homey.version, App: Homey.manifest.version, Device: deviceId})
-	device.log('settings', device.getSettings())
+    device.log('settings', device.getSettings())
     vehicles[deviceId] = {
       id: deviceId,
       name: device.getName(),
@@ -127,7 +127,7 @@ class Vehicle extends Homey.Device {
       await teslaSession.login().then(() => {
         device.log('tesla login success')
         reInit = true
-        device.logAvailable()
+        return device.logAvailable()
       }).catch(error => {
         device.log('tesla login error', error)
         throw new Error('Invalid password')
